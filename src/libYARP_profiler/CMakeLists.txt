@@ -3,10 +3,6 @@
 
 project(YARP_profiler)
 
-if(NOT YARP_COMPILE_libYARP_profiler)
-  return()
-endif()
-
 add_subdirectory(src)
 
 include(YarpInstallBasicPackageFiles)

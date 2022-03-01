@@ -14,7 +14,9 @@
 #include <yarp/os/Value.h>
 #include <yarp/os/Vocab.h>
 #include <yarp/os/impl/NameServer.h>
-
+#include <yarp/profiler/NetworkProfiler.h>
+#include <unordered_map>
+#include <map>
 
 using yarp::companion::impl::Companion;
 using yarp::os::Bottle;
@@ -23,6 +25,7 @@ using yarp::os::ContactStyle;
 using yarp::os::NetworkBase;
 using yarp::os::Value;
 using yarp::os::impl::NameServer;
+using yarp::profiler::NetworkProfiler;
 
 int Companion::cmdName(int argc, char* argv[])
 {
@@ -82,6 +85,57 @@ int Companion::cmdName(int argc, char* argv[])
         Contact result;
         result = NetworkBase::unregisterName(portName);
         yCInfo(COMPANION, "Unregistered name.");
+        return 0;
+    }
+    if (key == "connections") {
+        yCInfo(COMPANION) << "==================== Preparation ================================";
+
+        yCInfo(COMPANION) << "Getting the ports list...";
+        NetworkProfiler::ports_name_set ports;
+        NetworkProfiler::getPortsList(ports);
+
+
+        yCInfo(COMPANION) << "Getting the ports details...";
+        std::unordered_map<std::string, NetworkProfiler::PortDetails> portsInfo;
+
+        yCInfo(COMPANION) << "Getting the ports details...";
+        for(size_t i=0; i<ports.size(); i++) {
+            NetworkProfiler::PortDetails info;
+            std::string portname = ports[i].name;
+            yCInfo(COMPANION) << "Checking " + portname + "...";
+            if (NetworkProfiler::getPortDetails(portname, info)) {
+                portsInfo[portname] = info;
+            }
+        }
+
+        std::map<std::string, std::vector<std::string>> connectionsByCarrier;
+
+        for(auto& port : portsInfo)
+        {
+            std::stringstream output;
+            for (auto& outputConn : port.second.outputs) //just consider the output connections
+            {
+                auto& outputPort = portsInfo[outputConn.port_name];
+                output << "(" << port.second.owner_process.process_name << "@" << port.second.owner_process.owner_machine.hostname << ")"
+                       << port.second.info.name
+                       << " --(" << outputConn.carrier << ")--> "
+                       << "(" << outputPort.owner_process.process_name << "@" << outputPort.owner_process.owner_machine.hostname << ")"
+                       << outputPort.info.name;
+                connectionsByCarrier[outputConn.carrier].push_back(output.str());
+            }
+        }
+
+        yCInfo(COMPANION) << "==================== Connections ================================";
+
+        // All the output connections are printed ordered by carrier.
+        for (auto& carrier : connectionsByCarrier)
+        {
+            for (auto& connection: carrier.second)
+            {
+                yCInfo(COMPANION) << connection;
+            }
+        }
+
         return 0;
     }
 

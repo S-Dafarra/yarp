@@ -89,8 +89,8 @@ target_include_directories(YARP_companion
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-target_link_libraries(YARP_companion PUBLIC YARP::YARP_os YARP::YARP_rosmsg)
-list(APPEND YARP_companion_PUBLIC_DEPS YARP_os YARP_rosmsg )
+target_link_libraries(YARP_companion PUBLIC YARP::YARP_os YARP::YARP_profiler YARP::YARP_rosmsg)
+list(APPEND YARP_companion_PUBLIC_DEPS YARP_os YARP::YARP_profiler YARP_rosmsg)
 
 target_compile_features(YARP_companion PUBLIC cxx_std_17)
 

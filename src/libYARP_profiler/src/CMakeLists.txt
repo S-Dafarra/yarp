@@ -45,14 +45,9 @@ target_compile_features(YARP_profiler PUBLIC cxx_std_17)
 target_link_libraries(YARP_profiler
   PUBLIC
     YARP::YARP_os
-  PRIVATE
-    YARP::YARP_companion
 )
 list(APPEND YARP_profiler_PUBLIC_DEPS
   YARP_os
-)
-list(APPEND YARP_profiler_PRIVATE_DEPS
-  YARP_companion
 )
 
 set_property(TARGET YARP_profiler PROPERTY PUBLIC_HEADER ${YARP_profiler_HDRS})

@@ -10,15 +10,52 @@
 #include <yarp/os/ContactStyle.h>
 #include <yarp/os/Port.h>
 #include <yarp/os/OutputProtocol.h>
-#include <yarp/os/Carrier.h>
-#include <yarp/companion/impl/Companion.h>
+#include <yarp/os/Carriers.h>
+#include <yarp/os/impl/NameConfig.h>
 #include <algorithm>
 
 using namespace yarp::os;
 using namespace yarp::profiler;
 using namespace yarp::profiler::graph;
+using yarp::os::impl::NameConfig;
+using yarp::os::Carriers;
 
+namespace {
+void print_callback(yarp::os::Log::LogType type,
+                    const char* msg,
+                    const char* file,
+                    const unsigned int line,
+                    const char* func,
+                    double systemtime,
+                    double networktime,
+                    double externaltime,
+                    const char* comp_name,
+                    const char* id)
+{
+    YARP_UNUSED(type);
+    YARP_UNUSED(file);
+    YARP_UNUSED(line);
+    YARP_UNUSED(func);
+    YARP_UNUSED(systemtime);
+    YARP_UNUSED(networktime);
+    YARP_UNUSED(externaltime);
+    YARP_UNUSED(comp_name);
+    YARP_UNUSED(id);
+    static const char* err_str = "[ERROR] ";
+    static const char* warn_str = "[WARNING] ";
+    static const char* no_str = "";
+    printf("%s%s\n",
+           ((type == yarp::os::Log::ErrorType) ? err_str : ((type == yarp::os::Log::WarningType) ? warn_str : no_str)),
+           msg);
+}
+} //namespace
 
+YARP_LOG_COMPONENT(PROFILER,
+                   "yarp.companion.impl.Companion",
+                   yarp::os::Log::InfoType,
+                   yarp::os::Log::LogTypeReserved,
+                   print_callback,
+                   nullptr)
 
 NetworkProfiler::ProgressCallback* NetworkProfiler::progCallback = nullptr;
 

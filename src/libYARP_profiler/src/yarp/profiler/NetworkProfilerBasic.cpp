@@ -11,7 +11,8 @@
 #include <yarp/os/Port.h>
 #include <yarp/os/OutputProtocol.h>
 #include <yarp/os/Carrier.h>
-#include <yarp/companion/impl/Companion.h>
+#include <yarp/os/impl/NameConfig.h>
+#include <yarp/os/Carriers.h>
 #include <algorithm>
 
 using namespace yarp::os;
@@ -340,16 +341,62 @@ bool NetworkProfilerBasic::getPortDetails(const std::string& portName, PortDetai
 
 bool NetworkProfilerBasic::yarpClean(float timeout) {
 
+    yarp::os::impl::NameConfig nc;
+    std::string name = nc.getNamespace();
+    Bottle msg, reply;
+    msg.addString("bot");
+    msg.addString("list");
+    yInfo("Requesting list of ports from name server... ");
+    NetworkBase::write(name,
+                       msg,
+                       reply);
+    int ct = reply.size()-1;
+    yInfo("got %d port%s", ct, (ct!=1)?"s":"");
     if (timeout <= 0) {
         timeout = -1;
+        yInfo("No timeout; to specify one, do \"yarp clean --timeout NN.N\"");
+    } else {
+        yInfo("Using a timeout of %g seconds", timeout);
     }
+    for (size_t i=1; i<reply.size(); i++) {
+        Bottle *entry = reply.get(i).asList();
+        if (entry != nullptr) {
+            std::string port = entry->check("name", Value("")).asString();
+            if (port!="" && port!="fallback" && port!=name) {
+                Contact c = Contact::fromConfig(*entry);
+                if (c.getCarrier()=="mcast") {
+                    yInfo("Skipping mcast port %s...", port.c_str());
+                } else {
+                    Contact addr = c;
+                    yInfo("Testing %s at %s",
+                           port.c_str(),
+                           addr.toURI().c_str());
+                    if (addr.isValid()) {
+                        if (timeout>=0) {
+                            addr.setTimeout((float)timeout);
+                        }
+                        OutputProtocol *out = yarp::os::Carriers::connect(addr);
+                        if (out == nullptr) {
+                            yInfo("* No response, removing port %s", port.c_str());
+                            NetworkBase::unregisterName(port);
+                        } else {
+                            delete out;
+                        }
+                    }
+                }
+            } else {
+                if (port!="") {
+                    yInfo("Ignoring %s", port.c_str());
+                }
+            }
+        }
+    }
+    yInfo("Giving name server a chance to do garbage collection.");
+    std::string serverName = NetworkBase::getNameServerName();
+    Bottle cmd2("gc"), reply2;
+    NetworkBase::write(serverName, cmd2, reply2);
+    yInfo("Name server says: %s", reply2.toString().c_str());
 
-    std::stringstream sstream;
-    sstream<<timeout;
-    char* argv[2];
-    argv[0] = (char*) "--timeout";
-    argv[1] = (char*) sstream.str().c_str();
-    yarp::companion::impl::Companion::getInstance().cmdClean(2,argv);
     return true;
 }
 
